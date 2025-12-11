@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Community Awards 2025</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --card-bg: rgba(30, 30, 30, 0.6);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --accent: #FFD700;
+            --accent-dim: rgba(255, 215, 0, 0.2);
+            --error: #ff4d4d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #0f0f0f 70%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px 20px 100px 20px; /* Большой отступ снизу для кнопки */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 800;
+            margin: 10px 0 5px 0;
+            background: linear-gradient(135deg, #fff 30%, #ffd700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+
+        /* --- CATEGORIES --- */
+        .category-section {
+            margin-bottom: 40px;
+            scroll-margin-top: 20px; /* Для прокрутки */
+        }
+
+        .category-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--accent);
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+
+        .category-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+        }
+        .grid-people { grid-template-columns: repeat(2, 1fr); }
+        .grid-wide { grid-template-columns: 1fr; }
+
+        /* --- CARDS --- */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            overflow: hidden;
+        }
+
+        .card:active { transform: scale(0.98); }
+
+        .card.selected {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        }
+
+        .card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        
+        .you-badge {
+            position: absolute; top: 5px; right: 5px;
+            background: var(--error); color: white;
+            font-size: 10px; padding: 2px 6px;
+            border-radius: 4px; font-weight: bold; z-index: 10;
+        }
+
+        .card-img { width: 100%; height: auto; border-radius: 12px; margin-bottom: 8px; object-fit: cover; }
+        .people-img { aspect-ratio: 1/1; border-radius: 50%; width: 80px; height: 80px; margin: 0 auto 10px auto; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; }
+        .card.selected .people-img { border-color: var(--accent); }
+
+        .card-title { font-size: 14px; font-weight: 600; line-height: 1.2; margin-bottom: 2px; }
+        .card-subtitle { font-size: 11px; color: var(--text-secondary); }
+
+        .card-suggest {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border: 1px dashed var(--text-secondary); min-height: 130px;
+        }
+        .card-suggest i { font-size: 24px; margin-bottom: 5px; color: var(--text-secondary); }
+
+        /* --- SEARCH MODAL --- */
+        #searchModal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #000; z-index: 1000; padding: 20px; flex-direction: column;
+        }
+        #searchInput {
+            width: 100%; padding: 15px; border-radius: 12px; border: none;
+            background: #222; color: white; font-size: 16px; margin-bottom: 20px; outline: none; box-sizing: border-box;
+        }
+        #searchInput:focus { box-shadow: 0 0 0 2px var(--accent); }
+        #searchResults { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .search-item { padding: 15px; background: #1a1a1a; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; }
+        .search-item:active { background: #333; }
+        .search-item .nick { color: var(--accent); font-size: 12px; }
+        .close-modal { position: absolute; top: 15px; right: 15px; color: #fff; font-size: 24px; cursor: pointer; }
+
+        /* --- BOTTOM BUTTON --- */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 15px 20px 25px 20px;
+            background: linear-gradient(0deg, rgba(15,15,15,1) 0%, rgba(15,15,15,0.9) 70%, rgba(15,15,15,0) 100%);
+            z-index: 100;
+            display: flex; justify-content: center;
+        }
+
+        .submit-btn {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--accent);
+            color: #000;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+            transition: transform 0.1s;
+        }
+        
+        .submit-btn:active { transform: scale(0.98); }
+        .submit-btn:disabled { background-color: #333; color: #777; box-shadow: none; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🏆 ITOGI 2025</h1>
+    <p class="subtitle">Сообщество легенд</p>
+
+    <div id="app"></div>
+
+    <!-- Модальное окно поиска -->
+    <div id="searchModal">
+        <div class="close-modal" onclick="closeSearch()">✕</div>
+        <h2 style="margin-top: 40px; text-align: center;">Выберите кандидата</h2>
+        <input type="text" id="searchInput" placeholder="Поиск по имени или нику..." oninput="filterSearch()">
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- Кнопка голосования (теперь кастомная) -->
+    <div class="bottom-bar">
+        <button id="sendButton" class="submit-btn" onclick="sendVotes()">
+            ОТПРАВИТЬ ГОЛОСА (0/6)
+        </button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        // На всякий случай сообщаем ТГ, что приложение готово
+        tg.ready();
+
+        const currentUser = tg.initDataUnsafe?.user || { username: 'test_user', id: 123 }; 
+        const currentUsername = currentUser.username ? currentUser.username.toLowerCase() : '';
+
+        // --- ДАННЫЕ (Тот же список) ---
+        const communityListRaw = `
+нейронка (@legolasuz)
+беляш (@BelyashikKEK)
+Hqunik❤️ (@Hqunik)
+PIZZAYOLO (@ERROR_SANS_KILLINK)
+halopik🍌 (@Devaninno)
+Гектор Вектор (@stasikolp5)
+Tymofii Ushakov (@tim_udim)
+ДЖОННИ (@MASTURBIST250000TONTROTILA)
+Fin3_j (@Fin3_j)
+BUTYLKA (@No0o0l)
+Flowey (@SyFleChKA)
+Ник Украли Цыгане (@Potetochnik)
+𓆩ⲁⲛⳋⲉⳑⲓⲛⲕ𓆪 (@SirenaGargonovna)
+Алексей Лапаев (@ManipuliatorKukoldovich)
+Вафля (@Wonderwaffle_1)
+enddarkness (@enddarknesstf)
+Rashka (@rashka144)
+Knight (@Tokitoyy)
+Ромашечка (@chamomilekwysee)
+Beeq (@BeeQ228)
+Варщик (@Krockodildo)
+камень (@kamen22832)
+Nh (@armirr)
+Вишня (@MRVishnia)
+Va+LeraHachapurya (@Eeeeeeerrrrrrrrrrrrooooooorrrrrr)
+Котар (@RussianCAT905)
+Static Miku (@Stat1cMiku)
+Обрыганчик (@its_obrigan)
+Кимпинтяу (@JOTAN82)
+Jack700 (@c700sJ)
+Gigo (@Brat_417)
+Gerome (@CHICKEN1W)
+Mio (@St1go2)
+Оч длинный ник (@Prostodadva)
+4ebyre4ekman (@Mr_4ebyre4ekman)
+Рандом
+ФСБ (@U19221991)
+T.ᑎb⁬ (@T1NDEX)
+САНЯ 4К (@Myyydachoch)
+Caerzav (@Caerzav)
+Ⲅⲟⲩⲥⲧυⲕ Ⲙⲟⲣⲟⳅ ⲬⲞⲬⲞⲬⲞ⛄️ (@Miliy_Ghost)
+Кенсиро (@Kenshiro_12)
+Н (@Pepega_14)
+𝗕𝗲𝗮𝗰𝗵𝗲𝘀𝗚𝗼𝘁𝗨 (@akramilerk)
+Михаил (@NE_pubertat)
+AlekseyFeed (@AlekseyFeed)
+DIMA (@DMSSOUL)
+Badger (@Gummanitariy)
+SOCHNIJ (@UZENESOCHNIJ)
+Мяук (@mimimimiiiiimi)
+Cheems (@CheemsWasTaken)
+•°𝚆𝚊𝚍𝚎_𝚆𝚒𝚕𝚕𝚜𝚘𝚗°• (@MyLittleAmnesia)
+Серёга или Серёжа или Сергей (@SeryoGaa)
+Матвей Голобоков (@kubik_rubik2005)
+Zthyzs (@Crydot)
+Ugmivve (@Ugm1vve)
+Max Maxbetov (@Tulac_Chord)
+`;
+
+        const communityList = communityListRaw.trim().split('\n').map(line => {
+            const match = line.match(/(.*)\s\(@(.*)\)/);
+            if (match) {
+                return { name: match[1].trim(), username: match[2].trim() };
+            }
+            return { name: line.trim(), username: '' };
+        });
+
+        const categories = [
+            {
+                id: 'moderator', title: '🛡 Модератор года', desc: 'Кто больше всего помогал Ангелине и не бесил её', allowSuggest: true, type: 'people',
+                candidates: [
+                    { name: '𓆩ⲁⲛⳋⲉⳑⲓⲛⲕ𓆪', username: 'SirenaGargonovna', img: 'https://i.postimg.cc/cL3jWfFK/IMG_20251211_005940_935.jpg' },
+                    { name: 'Алексей Лапаев', username: 'ManipuliatorKukoldovich', img: 'https://i.postimg.cc/3xG6h2tk/IMG_20251211_005947_715.jpg' },
+                    { name: 'Мяук', username: 'mimimimiiiiimi', img: 'https://i.postimg.cc/x1m7QL68/IMG_20251211_005959_341.jpg' },
+                    { name: 'Ⲅⲟⲩⲥⲧυⲕ Ⲙⲟⲣⲟⳅ', username: 'Miliy_Ghost', img: 'https://i.postimg.cc/52zGJ8s6/IMG_20251211_010021_633.jpg' },
+                    { name: 'T.ᑎb⁬', username: 'T1NDEX', img: 'https://i.postimg.cc/L8P7Sjxs/IMG_20251211_010025_534.jpg' },
+                    { name: 'Котар', username: 'RussianCAT905', img: 'https://i.postimg.cc/0yS3v7VQ/IMG_20251211_010041_079.jpg' }
+                ]
+            },
+            {
+                id: 'active', title: '⚡ Актив года', desc: 'Кого вы видели в чате чаще всего', allowSuggest: true, type: 'people',
+                candidates: [
+                    { name: 'Tymofii Ushakov♥️', username: 'tim_udim', img: 'https://i.postimg.cc/3x6vXvhj/IMG_20251211_011101_145.jpg' },
+                    { name: 'T.ᑎb⁬', username: 'T1NDEX', img: 'https://i.postimg.cc/L8P7Sjxs/IMG_20251211_010025_534.jpg' },
+                    { name: 'камень', username: 'kamen22832', img: 'https://i.postimg.cc/sgW8z5T3/IMG_20251211_010107_354.jpg' },
+                    { name: 'Ⲅⲟⲩⲥⲧυⲕ Ⲙⲟⲣⲟⳅ', username: 'Miliy_Ghost', img: 'https://i.postimg.cc/52zGJ8s6/IMG_20251211_010021_633.jpg' },
+                    { name: 'Михаил', username: 'NE_pubertat', img: 'https://i.postimg.cc/dVCXFG5w/IMG_20251211_010131_324.jpg' },
+                    { name: 'Нейронка', username: 'legolasuz', img: 'https://i.postimg.cc/BnFy32ms/IMG_20251211_010141_108.jpg' }
+                ]
+            },
+            {
+                id: 'crypto', title: '💎 Криптан года', desc: 'Самый богатый фармила', allowSuggest: true, type: 'people',
+                candidates: [
+                    { name: 'Ник Украли Цыгане', username: 'Potetochnik', img: 'https://i.postimg.cc/fRF9c9sB/IMG_20251211_011054_829.jpg' },
+                    { name: 'Алексей Лапаев', username: 'ManipuliatorKukoldovich', img: 'https://i.postimg.cc/3xG6h2tk/IMG_20251211_005947_715.jpg' },
+                    { name: 'Вафля', username: 'Wonderwaffle_1', img: 'https://i.postimg.cc/wjNPzDw6/IMG_20251211_010157_401.jpg' },
+                    { name: 'Tymofii Ushakov♥️', username: 'tim_udim', img: 'https://i.postimg.cc/3x6vXvhj/IMG_20251211_011101_145.jpg' },
+                    { name: 'Va+LeraHachapurya', username: 'Eeeeeeerrrrrrrrrrrrooooooorrrrrr', img: 'https://i.postimg.cc/3xG6h2t5/IMG_20251211_010203_282.jpg' },
+                    { name: 'камень', username: 'kamen22832', img: 'https://i.postimg.cc/sgW8z5T3/IMG_20251211_010107_354.jpg' }
+                ]
+            },
+            {
+                id: 'project', title: '🚀 Проект года', desc: 'Проект который понравился вам больше всех', allowSuggest: false, type: 'content',
+                candidates: [
+                    { name: 'Серия недо-комиксов', img: 'https://i.postimg.cc/1tF2mwmH/IMG-20251211-012256-680.jpg' },
+                    { name: 'Горем бот', img: 'https://i.postimg.cc/vmTds4xq/1000002494.jpg' },
+                    { name: 'Тимофей-тян', img: 'https://i.postimg.cc/3wNHTk0b/images_(5).jpg' },
+                    { name: 'Ноябрьская ава Ангелины', img: 'https://i.postimg.cc/TYnd75nC/IMG_20251211_011906_588.jpg' },
+                    { name: 'Майнкрафт мир Алексея', img: 'https://i.postimg.cc/zfJ9kVkJ/IMG-20251211-011816-827.jpg' },
+                    { name: 'Дискорд горема', img: 'https://www.goha.ru/s/A:BQ/IN/mRePNTkx5p.png' }
+                ]
+            },
+            {
+                id: 'ava', title: '🖼 Ава года', desc: 'Самая крутая ава по вашему мнению', allowSuggest: false, type: 'content',
+                candidates: [
+                    { name: 'Новогодняя ава', img: 'https://i.postimg.cc/J7f755H0/IMG_20251211_011903_800.jpg' },
+                    { name: 'Ноябрьская ава', img: 'https://i.postimg.cc/TYnd75nC/IMG_20251211_011906_588.jpg' },
+                    { name: 'Обычная ава', img: 'https://i.postimg.cc/XNRNkkBv/IMG_20251211_011907_869.jpg' },
+                    { name: 'Лунная ава', img: 'https://i.postimg.cc/c1p1BBtH/IMG_20251211_011909_763.jpg' },
+                    { name: 'Первая ава', img: 'https://i.postimg.cc/CM3MssnM/IMG_20251211_011912_016.jpg' }
+                ]
+            },
+            {
+                id: 'phrase', title: '💬 Фраза года', desc: 'Легендарные цитаты', allowSuggest: false, type: 'content-wide',
+                candidates: [
+                    'https://i.postimg.cc/gcR6vJtX/IMG-20251211-005354-358.png',
+                    'https://i.postimg.cc/mgdcbFhB/IMG-20251211-004923-610.png',
+                    'https://i.postimg.cc/4x8KJhnX/IMG-20251211-004929-237.png',
+                    'https://i.postimg.cc/JzTy1BtC/IMG-20251211-004938-950.png',
+                    'https://i.postimg.cc/vZP1Q6DM/IMG-20251211-004955-460.png',
+                    'https://i.postimg.cc/0yt68JrR/IMG-20251211-005018-949.png',
+                    'https://i.postimg.cc/L8yqHZhM/IMG-20251211-005049-212.png',
+                    'https://i.postimg.cc/CxvZFfdy/IMG-20251211-005054-836.png',
+                    'https://i.postimg.cc/CxvZFf5W/IMG-20251211-005100-446.png',
+                    'https://i.postimg.cc/6pH79Gq1/IMG-20251211-005105-757.png',
+                    'https://i.postimg.cc/g2MwY6j7/IMG-20251211-005125-680.png',
+                    'https://i.postimg.cc/K89KZgjH/IMG-20251211-005155-958.png',
+                    'https://i.postimg.cc/SxZXyzRD/IMG-20251211-005306-688.png',
+                    'https://i.postimg.cc/Z5f9Tynj/IMG-20251211-005311-635.png',
+                    'https://i.postimg.cc/Bnh8q1bm/IMG-20251211-005316-965.png',
+                    'https://i.postimg.cc/SxZXyzRZ/IMG-20251211-005334-899.png'
+                ]
+            }
+        ];
+
+        let votes = {};
+        let activeCategoryForSearch = null;
+
+        const app = document.getElementById('app');
+        const sendBtn = document.getElementById('sendButton');
+
+        function render() {
+            categories.forEach(cat => {
+                const section = document.createElement('div');
+                section.className = 'category-section';
+                section.id = 'sec-' + cat.id; // Для прокрутки
+
+                const title = document.createElement('div');
+                title.className = 'category-title';
+                title.innerText = cat.title;
+
+                const desc = document.createElement('div');
+                desc.className = 'category-desc';
+                desc.innerText = cat.desc;
+
+                const grid = document.createElement('div');
+                grid.className = 'grid';
+                if (cat.type === 'people') grid.classList.add('grid-people');
+                if (cat.type === 'content-wide') grid.classList.add('grid-wide');
+                else if (cat.type === 'content') grid.classList.add('grid-people');
+
+                cat.candidates.forEach((cand, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    let candId, candName, candImg;
+                    if (cat.type === 'content-wide') {
+                        candId = index;
+                        candName = `Фраза #${index + 1}`;
+                        candImg = cand;
+                    } else {
+                        candId = cand.username || cand.name;
+                        candName = cand.name;
+                        candImg = cand.img;
+                    }
+
+                    const isSelf = (cat.type === 'people' && cand.username && cand.username.toLowerCase() === currentUsername);
+
+                    if (isSelf) {
+                        card.classList.add('disabled');
+                        card.innerHTML += `<div class="you-badge">ЭТО ТЫ</div>`;
+                    }
+
+                    if (cat.type === 'people') {
+                        card.innerHTML += `<img src="${candImg}" class="people-img" alt="img">`;
+                    } else {
+                        card.innerHTML += `<img src="${candImg}" class="card-img" alt="img">`;
+                    }
+
+                    card.innerHTML += `<div class="card-title">${candName}</div>`;
+                    if (cand.username) card.innerHTML += `<div class="card-subtitle">@${cand.username}</div>`;
+
+                    if (!isSelf) {
+                        card.addEventListener('click', () => vote(cat.id, candId, card, section));
+                    }
+                    grid.appendChild(card);
+                });
+
+                if (cat.allowSuggest) {
+                    const suggestCard = document.createElement('div');
+                    suggestCard.className = 'card card-suggest';
+                    suggestCard.id = `suggest-${cat.id}`;
+                    suggestCard.innerHTML = `<i>+</i><div>Предложить</div>`;
+                    suggestCard.addEventListener('click', () => openSearch(cat.id));
+                    grid.appendChild(suggestCard);
+                }
+
+                section.appendChild(title);
+                section.appendChild(desc);
+                section.appendChild(grid);
+                app.appendChild(section);
+            });
+        }
+
+        function vote(catId, value, cardEl, sectionEl) {
+            const allCards = sectionEl.querySelectorAll('.card');
+            allCards.forEach(c => c.classList.remove('selected'));
+            cardEl.classList.add('selected');
+            votes[catId] = value;
+            updateButton();
+        }
+
+        function updateButton() {
+            const count = Object.keys(votes).length;
+            const total = categories.length;
+            sendBtn.innerText = `ОТПРАВИТЬ ГОЛОСА (${count}/${total})`;
+            
+            if (count === total) {
+                sendBtn.style.opacity = "1";
+            } else {
+                sendBtn.style.opacity = "0.8";
+            }
+        }
+
+        function sendVotes() {
+            const count = Object.keys(votes).length;
+            const total = categories.length;
+
+            if (count < total) {
+                // Если выбраны не все
+                tg.showAlert(`Вы проголосовали только в ${count} из ${total} номинаций!\nНужно выбрать везде.`);
+                
+                // Найти первую пропущенную категорию и прокрутить к ней
+                const missing = categories.find(c => !votes[c.id]);
+                if (missing) {
+                    document.getElementById('sec-' + missing.id).scrollIntoView({behavior: 'smooth'});
+                }
+                return;
+            }
+
+            // Отправка
+            try {
+                tg.sendData(JSON.stringify(votes));
+                // Если не закрылось само (бывает глюк), закрываем принудительно через секунду
+                setTimeout(() => { tg.close(); }, 300);
+            } catch (e) {
+                tg.showAlert("Ошибка отправки! Попробуйте обновить приложение.");
+            }
+        }
+
+        function openSearch(catId) {
+            activeCategoryForSearch = catId;
+            document.getElementById('searchModal').style.display = 'flex';
+            document.getElementById('searchInput').focus();
+            filterSearch();
+        }
+
+        function closeSearch() {
+            document.getElementById('searchModal').style.display = 'none';
+        }
+
+        function filterSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+
+            const filtered = communityList.filter(u => 
+                u.name.toLowerCase().includes(query) || 
+                u.username.toLowerCase().includes(query)
+            );
+
+            filtered.forEach(u => {
+                if (u.username.toLowerCase() === currentUsername) return;
+
+                const item = document.createElement('div');
+                item.className = 'search-item';
+                item.innerHTML = `<span>${u.name}</span> <span class="nick">${u.username ? '@'+u.username : ''}</span>`;
+                item.addEventListener('click', () => selectCustomCandidate(u));
+                resultsDiv.appendChild(item);
+            });
+        }
+
+        function selectCustomCandidate(user) {
+            closeSearch();
+            const suggestCard = document.getElementById(`suggest-${activeCategoryForSearch}`);
+            const section = suggestCard.parentElement.parentElement;
+            
+            suggestCard.innerHTML = `
+                <div class="people-img" style="background:#333; display:flex; align-items:center; justify-content:center; font-size:20px;">👤</div>
+                <div class="card-title">${user.name}</div>
+                <div class="card-subtitle">${user.username ? '@'+user.username : ''}</div>
+            `;
+            
+            vote(activeCategoryForSearch, `SUGGESTED:${user.name}|${user.username}`, suggestCard, section);
+        }
+
+        render();
+        updateButton();
+
+    </script>
+</body>
+</html>
